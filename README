@@ -1,0 +1,23 @@
+
+###########################'
+### TWITTER CHUPA CABRA ###'
+###########################'
+
+Script python que ajuda a dar 'Follow' e 'Unfollow' de forma automatica, afim de fomentar e conseguir seguidores através de Follow-Back. 
+
+1. Instalar:
+    sudo pip install pycurl
+    sudo pip install python-twitter
+    
+2. Criar uma aplicação Twitter com descrito no site abaixo:
+    http://helio.loureiro.eng.br/index.php/programacao/25-python/189-escrevendo-uma-aplicacao-com-python-twitter-parte-2
+
+3. Abrir o script 'twitter-chupa-cabra.py' e editar as linhas descritas abaixo com base nas informações obtidas no passo 2:
+    USER                = '????????????????'
+    CONSUMER_KEY        = '????????????????'
+    CONSUMER_SECRET     = '????????????????'
+    ACCESS_TOKEN_KEY    = '????????????????'
+    ACCESS_TOKEN_SECRET = '????????????????'
+
+4. Rodar o script 'twitter-chupa-cabra.py' em um terminal:
+    python twitter-chupa-cabra.py
