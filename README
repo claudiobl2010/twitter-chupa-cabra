@@ -12,7 +12,7 @@ Script python que ajuda a dar 'Follow' e 'Unfollow' de forma automatica, afim de
 2. Criar uma aplicação Twitter com descrito no site abaixo:
     http://helio.loureiro.eng.br/index.php/programacao/25-python/189-escrevendo-uma-aplicacao-com-python-twitter-parte-2
 
-3. Abrir o script 'twitter-chupa-cabra.py' e editar as linhas descritas abaixo com base nas informações obtidas no passo 2:
+3. Abrir o script 'settings.py' e editar as linhas descritas abaixo com base nas informações obtidas no passo 2:
     USER                = '????????????????'
     CONSUMER_KEY        = '????????????????'
     CONSUMER_SECRET     = '????????????????'

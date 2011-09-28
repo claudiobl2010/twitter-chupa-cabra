@@ -5,19 +5,14 @@ import twitter
 import pycurl
 import StringIO
 import simplejson
-
-USER                = '????????????????'
-CONSUMER_KEY        = '????????????????'
-CONSUMER_SECRET     = '????????????????'
-ACCESS_TOKEN_KEY    = '????????????????'
-ACCESS_TOKEN_SECRET = '????????????????'
+import settings
 
 def get_api():
     
-    api = twitter.Api(consumer_key=CONSUMER_KEY, 
-                      consumer_secret=CONSUMER_SECRET, 
-                      access_token_key=ACCESS_TOKEN_KEY, 
-                      access_token_secret=ACCESS_TOKEN_SECRET)
+    api = twitter.Api(consumer_key=settings.CONSUMER_KEY, 
+                      consumer_secret=settings.CONSUMER_SECRET, 
+                      access_token_key=settings.ACCESS_TOKEN_KEY, 
+                      access_token_secret=settings.ACCESS_TOKEN_SECRET)
     
     return api
 
@@ -39,42 +34,74 @@ def chk_friendships_exists(user_id_a, user_id_b):
     curl.setopt(pycurl.WRITEFUNCTION, content_io.write)
     curl.perform()
     response = content_io.getvalue()
+    response_dict = simplejson.loads(response)
     curl.close()
-    return False if response == 'false' else True
+    return response_dict
 
 def do_follow(api, qtd):
     pag = int(raw_input('A partir de qual pagina: '))
     seguidores_de = raw_input('Seguir os seguidores de qual usuario: ')
-    
+    chk_amizade = int(raw_input('Deseja fazer verificacao de amizade = (1) Sim | (2) Nao: '))
+
     print
-    
-    seguidores_de_user = api.GetUser(seguidores_de)
-    
-    meu_user = api.GetUser(USER)
-    
-    followers_dict = get_followers_ids(seguidores_de_user.id)
-    followers_ids = followers_dict['ids']
 
     contador = 0
     seguidos = 0
     
-    cursor_ini = pag * qtd - qtd
-    cursor_fim = pag * qtd if pag * qtd < len(followers_ids) else len(followers_ids)
+    seguidores_de_user = api.GetUser(seguidores_de)
     
-    for i in range(cursor_ini, cursor_fim):
-        esta_seguindo = chk_friendships_exists(meu_user.id, followers_ids[i])
+    meu_user = api.GetUser(settings.USER)
+    
+    followers_dict = get_followers_ids(seguidores_de_user.id)
+    
+    if not followers_dict.has_key('error'): 
+    
+        followers_ids = followers_dict['ids']
+    
+        cursor_ini = pag * qtd - qtd
+        cursor_fim = pag * qtd if pag * qtd < len(followers_ids) else len(followers_ids)
         
-        contador = contador + 1
+        for i in range(cursor_ini, cursor_fim):
+            contador = contador + 1
+            
+            if chk_amizade == 1:
+                esta_seguindo = chk_friendships_exists(meu_user.id, followers_ids[i])
+                
+                if isinstance(esta_seguindo, bool):
+                    esta_seguindo = str(esta_seguindo)
+                else:
+                    esta_seguindo = esta_seguindo['error']
+            else:
+                esta_seguindo = 'False'
+            
+            if esta_seguindo == 'False':
+                try:
+                    api.CreateFriendship(followers_ids[i])
         
-        if esta_seguindo:
-            print '%s - Follow (%s) = Ja esta seguindo!!!' % (contador, followers_ids[i])
-        else:
-            api.CreateFriendship(followers_ids[i])
+                    seguidos = seguidos + 1
+            
+                    print '%s - Follow (%s)' % (contador, followers_ids[i])
+                except Exception, e:
+                    print '%s - Follow (%s) = ERROR AO TENTAR DAR O FOLLOW!!!!!!' % (contador, followers_ids[i])
 
-            seguidos = seguidos + 1
-    
-            print '%s - Follow (%s)' % (contador, followers_ids[i])
-    
+            elif esta_seguindo == 'True':
+                print '%s - Follow (%s) = Ja esta seguindo!!!' % (contador, followers_ids[i])
+                
+            elif esta_seguindo == 'Following information is not available for protected users without authentication.':
+                print '%s - Follow (%s) = Nao foi possivel fazer verificacao de amizade. Usuario bloqueou sua lista de seguidores!!!' % (contador, followers_ids[i])
+
+            else: 
+                print '%s - Follow (%s) = ERROR AO TENTAR FAZER VERIFICACAO DE AMIZADE!!!' % (contador, esta_seguindo)
+                continuar_verificando = int(raw_input('Deseja continuar sem verificacao de amizade = (1) Continuar | (2) Parrar: '))
+                
+                if continuar_verificando == 1:
+                    chk_amizade = 2
+                else:
+                    break
+
+    else:
+        print '%s - Follow (%s) = ERROR AO TENTAR RECUPERAR OS FOLLOWERS!!!' % (contador, followers_dict['error'])
+        
     print
     print 'Total de Follow = %s' % seguidos
     print
@@ -82,23 +109,29 @@ def do_follow(api, qtd):
 def do_unfollow(api, qtd):
     print
     
+    contador = 0
     excluidos = 0
     
-    friends = api.GetFriends(USER)
+    friends = api.GetFriends(settings.USER)
 
     while (friends and excluidos < qtd):
         
         for user in friends:
-            api.DestroyFriendship(user.id) 
+            contador = contador + 1
             
-            excluidos = excluidos + 1
-            
-            print '%s - Unfollow (%s)' % (excluidos, user.screen_name)
-            
+            try:
+                api.DestroyFriendship(user.id) 
+                
+                excluidos = excluidos + 1
+                
+                print '%s - Unfollow (%s)' % (contador, user.screen_name)
+            except Exception, e:
+                print '%s - Unfollow (%s) = ERROR AO TENTAR DAR O UNFOLLOW!!!' % (contador, user.screen_name)
+                        
             if excluidos == qtd:
                 break
         else:
-            friends = api.GetFriends(USER)
+            friends = api.GetFriends(settings.USER)
 
     print
     print 'Total de Unfollow = %s' % excluidos
