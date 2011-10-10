@@ -1,1 +1,5 @@
 #comentario
+#user.id
+#99999999
+#user.screen_name
+#@chiquinho

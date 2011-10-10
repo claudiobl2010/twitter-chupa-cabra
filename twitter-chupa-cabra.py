@@ -43,23 +43,28 @@ def do_whitelist(api):
     
     contador = 0
     
-    friends = api.GetFriends(settings.USER)
+    friend_ids = api.GetFriendIDs(user=settings.USER, cursor=-1)
     
     f = open('whitelist.txt', 'w')
 
     f.write('#comentario\n')
+    f.write('#user.id\n')
+    f.write('#99999999\n')
+    f.write('#user.screen_name\n')
+    f.write('#@chiquinho\n')
 
-    while (friends):
+    while (friend_ids['ids']):
         
-        for user in friends:
+        for user_id in friend_ids['ids']:
             contador = contador + 1
             
-            f.write('%s\n' % user.screen_name)
+            f.write('%s\n' % user_id)
             
-            print '%s - Whitelist (%s)' % (contador, user.screen_name)
+            print '%s - Whitelist (%s)' % (contador, user_id)
 
         else:
-            friends = api.GetFriends(settings.USER)
+            next_cursor = int(friend_ids['next_cursor'])
+            friend_ids = api.GetFriendIDs(user=settings.USER, cursor=next_cursor)
             
     f.close()
 
@@ -71,17 +76,22 @@ def load_whitelist():
 
     f = open('whitelist.txt', 'r')
 
-    whitelist = []
+    whitelist_ids = []
+    whitelist_screen_name = []
     
     for line in f:
         line = line.replace('\n', '')
         if not line.startswith('#'):
             if line:
-                whitelist.append(line)
+                if line.startswith('@'):
+                    line = line.replace('@', '')
+                    whitelist_screen_name.append(line)
+                else:
+                    whitelist_ids.append(int(line))
             
     f.close()
     
-    return whitelist
+    return whitelist_ids, whitelist_screen_name
 
 def do_follow(api):
     qtd = int(raw_input('Quantidade: '))
@@ -157,7 +167,7 @@ def do_unfollow(api):
 
     print
     
-    whitelist = load_whitelist()
+    whitelist_ids, whitelist_screen_name = load_whitelist()
     
     contador = 0
     excluidos = 0
@@ -168,8 +178,8 @@ def do_unfollow(api):
         
         for user in friends:
             contador = contador + 1
-            
-            if user.screen_name not in whitelist:
+
+            if (user.id not in whitelist_ids) and (user.screen_name not in whitelist_screen_name):
                 try:
                     api.DestroyFriendship(user.id) 
                     
@@ -179,7 +189,7 @@ def do_unfollow(api):
                 except Exception, e:
                     print '%s - Unfollow (%s) = ERROR AO TENTAR DAR O UNFOLLOW!!!' % (contador, user.screen_name)
             else:
-                print '%s - Whitelist (%s) = WHITELIST!!!' % (contador, user.screen_name)
+                print '%s - Unfollow (%s) = WHITELIST!!!' % (contador, user.screen_name)
                         
             if contador == qtd:
                 break
