@@ -38,7 +38,53 @@ def chk_friendships_exists(user_id_a, user_id_b):
     curl.close()
     return response_dict
 
-def do_follow(api, qtd):
+def do_whitelist(api):
+    print
+    
+    contador = 0
+    
+    friends = api.GetFriends(settings.USER)
+    
+    f = open('whitelist.txt', 'w')
+
+    f.write('#comentario\n')
+
+    while (friends):
+        
+        for user in friends:
+            contador = contador + 1
+            
+            f.write('%s\n' % user.screen_name)
+            
+            print '%s - Whitelist (%s)' % (contador, user.screen_name)
+
+        else:
+            friends = api.GetFriends(settings.USER)
+            
+    f.close()
+
+    print
+    print 'Total de Whitelist = %s' % contador
+    print
+
+def load_whitelist():
+
+    f = open('whitelist.txt', 'r')
+
+    whitelist = []
+    
+    for line in f:
+        line = line.replace('\n', '')
+        if not line.startswith('#'):
+            if line:
+                whitelist.append(line)
+            
+    f.close()
+    
+    return whitelist
+
+def do_follow(api):
+    qtd = int(raw_input('Quantidade: '))
     pag = int(raw_input('A partir de qual pagina: '))
     seguidores_de = raw_input('Seguir os seguidores de qual usuario: ')
     chk_amizade = int(raw_input('Deseja fazer verificacao de amizade = (1) Sim | (2) Nao: '))
@@ -106,29 +152,36 @@ def do_follow(api, qtd):
     print 'Total de Follow = %s' % seguidos
     print
 
-def do_unfollow(api, qtd):
+def do_unfollow(api):
+    qtd = int(raw_input('Quantidade: '))
+
     print
+    
+    whitelist = load_whitelist()
     
     contador = 0
     excluidos = 0
     
     friends = api.GetFriends(settings.USER)
 
-    while (friends and excluidos < qtd):
+    while (friends and contador < qtd):
         
         for user in friends:
             contador = contador + 1
             
-            try:
-                api.DestroyFriendship(user.id) 
-                
-                excluidos = excluidos + 1
-                
-                print '%s - Unfollow (%s)' % (contador, user.screen_name)
-            except Exception, e:
-                print '%s - Unfollow (%s) = ERROR AO TENTAR DAR O UNFOLLOW!!!' % (contador, user.screen_name)
+            if user.screen_name not in whitelist:
+                try:
+                    api.DestroyFriendship(user.id) 
+                    
+                    excluidos = excluidos + 1
+                    
+                    print '%s - Unfollow (%s)' % (contador, user.screen_name)
+                except Exception, e:
+                    print '%s - Unfollow (%s) = ERROR AO TENTAR DAR O UNFOLLOW!!!' % (contador, user.screen_name)
+            else:
+                print '%s - Whitelist (%s) = WHITELIST!!!' % (contador, user.screen_name)
                         
-            if excluidos == qtd:
+            if contador == qtd:
                 break
         else:
             friends = api.GetFriends(settings.USER)
@@ -146,12 +199,13 @@ print '### TWITTER CHUPA CABRA ###'
 print '###########################'
 print
 
-opt = int(raw_input('Entre com o tipo de processo = (1) Follow | (2) Unfollow: '))
-qtd = int(raw_input('Quantidade: '))
+opt = int(raw_input('Entre com o tipo de processo = (1) Follow | (2) Unfollow | (3) Whitelist: '))
 
 api = get_api()
 
 if opt == 1:
-    do_follow(api, qtd)
+    do_follow(api)
 elif opt == 2:
-    do_unfollow(api, qtd)
+    do_unfollow(api)
+elif opt == 3:
+    do_whitelist(api)
