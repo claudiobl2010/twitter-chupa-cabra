@@ -1,0 +1,1 @@
+#arquivo temporario com a lista de amigos atual para verificacao de amizade
