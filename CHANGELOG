@@ -1,0 +1,23 @@
+Version 0.4 (15/11/2011)
+  * opção multi-conta twitter no arquivo settings.py
+  * opção de não dar unfollow em quem esta me seguindo
+  * melhoria na verificação de amizade para não haver a necessidade de criar o arquivo friendlisttmp.txt
+  * adicionando CHANGELOG
+
+Version 0.3 (13/10/2011)
+  * adicionando funcionalidade de dont disturb
+  * refinando a verificacao de amizade
+
+Version 0.2.1 (10/10/2011)
+  * corrigindo bug na geracao da whitelist
+
+Version 0.2 (09/10/2011)
+  * opção para gerar uma whitelist afim de não dar unfollow
+
+Version 0.1.1 (28/09/2011)
+  * fixes tratamentos de erro
+ 
+Version 0.1 (27/09/2011)
+  * initial release
+  * versao 0.1 do script twitter-chupa-cabra funcionando
+  * script python para dar follow e unfollow em contas do twitter automaticamente

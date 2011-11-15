@@ -7,12 +7,34 @@ import StringIO
 import simplejson
 import settings
 
+def seleciona_conta_twitter():
+    if settings.conta_twitter_default:
+        if settings.contas_twitter.has_key(settings.conta_twitter_default):
+            return settings.conta_twitter_default, \
+                   settings.contas_twitter[settings.conta_twitter_default]['consumer_key'], \
+                   settings.contas_twitter[settings.conta_twitter_default]['consumer_secret'], \
+                   settings.contas_twitter[settings.conta_twitter_default]['access_token_key'], \
+                   settings.contas_twitter[settings.conta_twitter_default]['access_token_secret']
+        else:
+            print 'O parametro (conta_twitter_default) nao corresponde a uma conta valida configurada, verifique o (settings.py)'
+            return None
+    else:
+        conta_twitter = raw_input('Entre com o SEU usuario twitter: ')
+        if settings.contas_twitter.has_key(conta_twitter):
+            return conta_twitter, \
+                   settings.contas_twitter[conta_twitter]['consumer_key'], \
+                   settings.contas_twitter[conta_twitter]['consumer_secret'], \
+                   settings.contas_twitter[conta_twitter]['access_token_key'], \
+                   settings.contas_twitter[conta_twitter]['access_token_secret']
+        else:
+            print 'O usuario twitter informado nao corresponde a uma conta valida configurada'
+            return None
+        
 def get_api():
-    
-    api = twitter.Api(consumer_key=settings.CONSUMER_KEY, 
-                      consumer_secret=settings.CONSUMER_SECRET, 
-                      access_token_key=settings.ACCESS_TOKEN_KEY, 
-                      access_token_secret=settings.ACCESS_TOKEN_SECRET)
+    api = twitter.Api(consumer_key=CONSUMER_KEY, 
+                      consumer_secret=CONSUMER_SECRET, 
+                      access_token_key=ACCESS_TOKEN_KEY, 
+                      access_token_secret=ACCESS_TOKEN_SECRET)
     
     return api
 
@@ -27,23 +49,36 @@ def get_followers_ids(user_id, cursor=-1):
     curl.close()
     return response_dict
 
-def chk_friendships_exists(user_id_a, user_id_b):
-    curl = pycurl.Curl()
-    curl.setopt(pycurl.URL, 'http://api.twitter.com/1/friendships/exists.json?user_id_a=%s&user_id_b=%s' % (user_id_a, user_id_b))
-    content_io = StringIO.StringIO()
-    curl.setopt(pycurl.WRITEFUNCTION, content_io.write)
-    curl.perform()
-    response = content_io.getvalue()
-    response_dict = simplejson.loads(response)
-    curl.close()
-    return response_dict
+def load_followers_seguindo(user_id, chk_seguindo):
+
+    ids = []
+    
+    if chk_seguindo == 2:
+    
+        followers_dict = get_followers_ids(user_id)
+        
+        if followers_dict.has_key('error'):
+            return followers_dict
+    
+        while (followers_dict['ids']):
+            
+            for id in followers_dict['ids']:
+                ids.append(int(id))
+            else:
+                next_cursor = int(followers_dict['next_cursor'])
+                followers_dict = get_followers_ids(user_id, cursor=next_cursor)
+    
+                if followers_dict.has_key('error'):
+                    return followers_dict
+            
+    return ids
 
 def do_whitelist(api):
     print
     
     contador = 0
     
-    friend_ids = api.GetFriendIDs(user=settings.USER, cursor=-1)
+    friend_ids = api.GetFriendIDs(user=USER, cursor=-1)
     
     f = open('whitelist.txt', 'w')
 
@@ -64,7 +99,7 @@ def do_whitelist(api):
 
         else:
             next_cursor = int(friend_ids['next_cursor'])
-            friend_ids = api.GetFriendIDs(user=settings.USER, cursor=next_cursor)
+            friend_ids = api.GetFriendIDs(user=USER, cursor=next_cursor)
             
     f.close()
 
@@ -93,42 +128,24 @@ def load_whitelist():
     
     return whitelist_ids, whitelist_screen_name
 
-def do_friend_list_tmp(api, chk_amizade):
+def load_friends_list(api, chk_amizade):
 
-    f = open('friendlisttmp.txt', 'w')
-
-    f.write('#arquivo temporario com a lista de amigos atual para verificacao de amizade\n')
+    ids = []
     
     if chk_amizade == 1:
 
-        friend_ids = api.GetFriendIDs(user=settings.USER, cursor=-1)
+        friend_ids = api.GetFriendIDs(user=USER, cursor=-1)
     
         while (friend_ids['ids']):
             
             for user_id in friend_ids['ids']:
-                f.write('%s\n' % user_id)
+                ids.append(int(user_id))
             else:
                 next_cursor = int(friend_ids['next_cursor'])
-                friend_ids = api.GetFriendIDs(user=settings.USER, cursor=next_cursor)
+                friend_ids = api.GetFriendIDs(user=USER, cursor=next_cursor)
             
-    f.close()
-    
-def load_friendlisttmp():
-
-    f = open('friendlisttmp.txt', 'r')
-
-    ids = []
-    
-    for line in f:
-        line = line.replace('\n', '')
-        if not line.startswith('#'):
-            if line:
-                ids.append(int(line))
-            
-    f.close()
-    
     return ids
-
+    
 def load_dont_disturb():
 
     f = open('dont_disturb.txt', 'r')
@@ -158,12 +175,11 @@ def do_follow(api):
     
     seguidores_de_user = api.GetUser(seguidores_de)
     
-    meu_user = api.GetUser(settings.USER)
+    meu_user = api.GetUser(USER)
     
     followers_dict = get_followers_ids(seguidores_de_user.id)
     
-    do_friend_list_tmp(api, chk_amizade)
-    friend_ids_atual = load_friendlisttmp()
+    friend_ids_atual = load_friends_list(api, chk_amizade)
     
     ids_dont_disturb = load_dont_disturb()
 
@@ -209,15 +225,23 @@ def do_follow(api):
 
 def do_unfollow(api):
     qtd = int(raw_input('Quantidade: '))
+    chk_seguindo = int(raw_input('Deseja dar unfollow em usuarios que estao te seguindo = (1) Sim | (2) Nao: '))
 
     print
     
     whitelist_ids, whitelist_screen_name = load_whitelist()
     
+    meu_user = api.GetUser(USER)
+    ids_seguindo = load_followers_seguindo(meu_user.id, chk_seguindo)
+    
+    if isinstance(ids_seguindo, dict):
+        print 'Unfollow (%s) = ERROR AO TENTAR RECUPERAR OS USUARIOS QUE ESTAO TE SEGUINDO!!!' % ids_seguindo['error']
+        return
+    
     contador = 0
     excluidos = 0
     
-    friends = api.GetFriends(settings.USER)
+    friends = api.GetFriends(USER)
     
     ids_dont_disturb = load_dont_disturb()
 
@@ -229,25 +253,28 @@ def do_unfollow(api):
             contador = contador + 1
 
             if (user.id not in whitelist_ids) and (user.screen_name not in whitelist_screen_name):
-                try:
-                    api.DestroyFriendship(user.id) 
-                    
-                    excluidos = excluidos + 1
-                    
-                    if user.id not in ids_dont_disturb:
-                        f.write('%s\n' % user.id)
-                        ids_dont_disturb.append(user.id)
-                    
-                    print '%s - Unfollow (%s)' % (contador, user.screen_name)
-                except Exception, e:
-                    print '%s - Unfollow (%s) = ERROR AO TENTAR DAR O UNFOLLOW!!!' % (contador, user.screen_name)
+                if user.id not in ids_seguindo:
+                    try:
+                        api.DestroyFriendship(user.id) 
+                        
+                        excluidos = excluidos + 1
+                        
+                        if user.id not in ids_dont_disturb:
+                            f.write('%s\n' % user.id)
+                            ids_dont_disturb.append(user.id)
+                        
+                        print '%s - Unfollow (%s)' % (contador, user.screen_name)
+                    except Exception, e:
+                        print '%s - Unfollow (%s) = ERROR AO TENTAR DAR O UNFOLLOW!!!' % (contador, user.screen_name)
+                else:
+                    print '%s - Unfollow (%s) = ESSE USUARIO ESTA TE SEGUINDO!!!' % (contador, user.screen_name)
             else:
                 print '%s - Unfollow (%s) = WHITELIST!!!' % (contador, user.screen_name)
                         
             if contador == qtd:
                 break
         else:
-            friends = api.GetFriends(settings.USER)
+            friends = api.GetFriends(USER)
 
     f.close()
     
@@ -265,6 +292,8 @@ print '###########################'
 print
 
 opt = int(raw_input('Entre com o tipo de processo = (1) Follow | (2) Unfollow | (3) Whitelist: '))
+
+USER, CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN_KEY, ACCESS_TOKEN_SECRET = seleciona_conta_twitter()
 
 api = get_api()
 
